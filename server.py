@@ -3,7 +3,6 @@ import os
 import threading
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Literal, Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -111,7 +110,7 @@ def scraping_worker(issue_name: str, duration_per_page: float, max_pages: int):
 
     except Exception as e:
         logger.error(f"Error during scraping: {e}")
-        scraping_state["status"] = f"Error: {str(e)}"
+        scraping_state["status"] = f"Error: {e!s}"
     finally:
         scraping_state["is_running"] = False
 
@@ -129,7 +128,14 @@ app = FastAPI(title="Readly MCP API", lifespan=lifespan)
 # Add CORS for SOTA Frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify the frontend port 10862
+    allow_origins=[
+        "http://127.0.0.1:11200",
+        "http://localhost:11200",
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -223,4 +229,4 @@ def stop_scraping_tool():
 
 if __name__ == "__main__":
     port = int(os.getenv("WEB_PORT", 11201))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="127.0.0.1", port=port)

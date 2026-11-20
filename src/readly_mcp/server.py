@@ -251,7 +251,14 @@ _mcp_http = mcp.http_app(path="/")
 app = FastAPI(title="Readly MCP API", lifespan=_mcp_http.lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:11200",
+        "http://localhost:11200",
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
