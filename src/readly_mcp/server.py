@@ -4,6 +4,8 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
 
@@ -242,6 +244,52 @@ async def list_library() -> dict:
     except Exception as exc:
         logger.debug("Browser already running: %s", exc)
     return await browser_manager.list_library()
+
+
+def _bookmarks_path() -> Path:
+    return Path(os.environ.get("READLY_BOOKMARKS_FILE") or Path.home() / ".readly-mcp" / "bookmarks.json")
+
+
+def bookmarks_op(operation: str, url: str = "", title: str = "", note: str = "") -> dict:
+    """Bookmark storage logic (plain function so it is testable without MCP)."""
+    path = _bookmarks_path()
+    try:
+        items: list[dict] = json.loads(path.read_text("utf-8")) if path.exists() else []
+    except (OSError, ValueError) as exc:
+        return {"success": False, "message": f"Cannot read bookmarks file: {exc}"}
+
+    if operation == "list":
+        return {"success": True, "message": f"{len(items)} bookmark(s)", "bookmarks": items}
+    if operation not in ("add", "remove"):
+        return {"success": False, "message": "operation must be one of: add, list, remove"}
+    if not url.strip():
+        return {"success": False, "message": "url is required"}
+
+    url = url.strip()
+    if operation == "add":
+        # Re-adding the same URL updates it instead of duplicating.
+        items = [b for b in items if b["url"] != url]
+        items.append({"url": url, "title": title, "note": note, "added": datetime.now(timezone.utc).isoformat()})
+        message = "Bookmark saved"
+    else:
+        kept = [b for b in items if b["url"] != url]
+        if len(kept) == len(items):
+            return {"success": False, "message": "Bookmark not found"}
+        items, message = kept, "Bookmark removed"
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(items, indent=2, ensure_ascii=False), "utf-8")
+    return {"success": True, "message": message, "bookmarks": items}
+
+
+@mcp.tool()
+def bookmarks(operation: str, url: str = "", title: str = "", note: str = "") -> dict:
+    """Manage local bookmarks for magazines/issues/articles.
+
+    operation: 'add' (url required; title, note optional), 'list', or 'remove' (url required).
+    Use the URLs returned by list_articles, list_library or search_magazines.
+    """
+    return bookmarks_op(operation, url, title, note)
 
 
 # --- FastAPI API Bridge ---
