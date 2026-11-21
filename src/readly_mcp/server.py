@@ -292,6 +292,22 @@ def bookmarks(operation: str, url: str = "", title: str = "", note: str = "") ->
     return bookmarks_op(operation, url, title, note)
 
 
+@mcp.tool()
+async def scrape_saved(url: str = "", max_articles: int = 10) -> dict:
+    """Open your Readly bookmarks/saved page and extract the full text of the articles on it.
+
+    url: the saved-articles page of your Readly account (or set READLY_BOOKMARKS_URL).
+    """
+    url = url.strip() or os.environ.get("READLY_BOOKMARKS_URL", "").strip()
+    if not url:
+        return {"success": False, "message": "Pass url or set READLY_BOOKMARKS_URL (your Readly saved page)"}
+    await _ensure_browser()
+    opened = await browser_manager.open_url(url)
+    if not opened.get("success"):
+        return {"success": False, "message": f"Could not open page: {opened.get('error')}"}
+    return await browser_manager.read_all_articles(max_articles=max_articles)
+
+
 # --- FastAPI API Bridge ---
 
 _mcp_http = mcp.http_app(path="/")
