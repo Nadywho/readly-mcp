@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
@@ -269,7 +269,7 @@ def bookmarks_op(operation: str, url: str = "", title: str = "", note: str = "")
     if operation == "add":
         # Re-adding the same URL updates it instead of duplicating.
         items = [b for b in items if b["url"] != url]
-        items.append({"url": url, "title": title, "note": note, "added": datetime.now(timezone.utc).isoformat()})
+        items.append({"url": url, "title": title, "note": note, "added": datetime.now(UTC).isoformat()})
         message = "Bookmark saved"
     else:
         kept = [b for b in items if b["url"] != url]
